@@ -1,4 +1,48 @@
-use feed_rs::{model::Feed, parser};
+use feed_rs::{
+    model::{Entry, Feed},
+    parser,
+};
+use serde::Serialize;
+
+#[derive(Serialize, Debug)]
+struct MyFeed {
+    title: String,
+    entries: Vec<MyEntry>,
+}
+
+#[derive(Serialize, Debug)]
+struct MyEntry {
+    title: String,
+    content: String,
+}
+
+impl From<Entry> for MyEntry {
+    fn from(value: Entry) -> Self {
+        let title_value = value
+            .title
+            .map_or("N/A".to_owned(), |title_text| title_text.content);
+
+        let content_value = value.content.map_or("N/A".to_owned(), |content| {
+            content.body.unwrap_or("N/A".to_owned())
+        });
+
+        MyEntry {
+            title: title_value,
+            content: content_value,
+        }
+    }
+}
+
+impl From<Feed> for MyFeed {
+    fn from(value: Feed) -> Self {
+        MyFeed {
+            title: value
+                .title
+                .map_or("N/A".to_owned(), |title_text| title_text.content),
+            entries: value.entries.into_iter().map(|a| a.into()).collect(),
+        }
+    }
+}
 
 async fn fetch_feed() -> Result<String, reqwest::Error> {
     let data: String = reqwest::Client::new()
@@ -16,25 +60,9 @@ fn handler(_e: reqwest::Error) -> String {
 }
 
 fn collect_feed(feed: Feed) -> String {
-    let title = match feed.title {
-        Some(title) => title.content,
-        None => "N/A".to_owned(),
-    };
-
-    let entries: String = feed
-        .entries
-        .iter()
-        .map(|entry| {
-            let entry_title: String = match &entry.title {
-                Some(title) => title.content,
-                None => "N/A".to_string(),
-            };
-
-            return format!("{{\"title\": \"{}\"}},", entry_title);
-        })
-        .collect();
-
-    return format!("{{\"title\": \"{}\", \"entries\": {}}}", title, entries);
+    let feed: MyFeed = feed.into();
+    // Todo Handle error
+    serde_json::to_string(&feed).unwrap()
 }
 
 pub async fn feed() -> String {
