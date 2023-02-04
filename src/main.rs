@@ -1,3 +1,4 @@
+mod medium;
 mod youtube;
 
 use axum::{routing::get, Router};
@@ -7,7 +8,8 @@ async fn main() {
     const PORT: u32 = 3000u32;
 
     let app = Router::new()
-        .route("/youtube/live", get(youtube::live));
+        .route("/youtube/live", get(youtube::live))
+        .route("/medium", get(medium::feed));
 
     println!("Listening on http://127.0.0.1:{}", PORT);
 
