@@ -22,9 +22,9 @@ impl From<Entry> for MyEntry {
     fn from(value: Entry) -> Self {
         let title_value = value
             .title
-            .map_or("".to_owned(), |title_text| title_text.content);
+            .map_or("Frank Mayer Blog".to_owned(), |title_text| title_text.content);
 
-        let content_value = value.content.map_or("".to_owned(), |content| {
+        let content_value = value.content.map_or("N/A".to_owned(), |content| {
             content.body.unwrap_or("".to_owned())
         });
 
