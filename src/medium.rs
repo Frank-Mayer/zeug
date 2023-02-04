@@ -22,15 +22,15 @@ impl From<Entry> for MyEntry {
     fn from(value: Entry) -> Self {
         let title_value = value
             .title
-            .map_or("N/A".to_owned(), |title_text| title_text.content);
+            .map_or("".to_owned(), |title_text| title_text.content);
 
-        let content_value = value.content.map_or("N/A".to_owned(), |content| {
-            content.body.unwrap_or("N/A".to_owned())
+        let content_value = value.content.map_or("".to_owned(), |content| {
+            content.body.unwrap_or("".to_owned())
         });
 
         let summary_value = value
             .summary
-            .map_or("N/A".to_owned(), |summary| summary.content);
+            .map_or("".to_owned(), |summary| summary.content);
 
         MyEntry {
             slug: make_slug(title_value.clone()),
