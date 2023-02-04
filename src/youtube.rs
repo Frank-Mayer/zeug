@@ -23,7 +23,10 @@ pub async fn live() -> Redirect {
     let res = live_internal().await;
 
     match res {
-        Ok(data) => Redirect::temporary(&*format!("https://www.youtube-nocookie.com/embed/{}?autoplay=1", data.id)),
+        Ok(data) => Redirect::temporary(&*format!(
+            "https://www.youtube-nocookie.com/embed/{}?autoplay=1",
+            data.id
+        )),
         Err(_) => Redirect::temporary("about:blank"),
     }
 }

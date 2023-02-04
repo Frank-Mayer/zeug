@@ -13,6 +13,7 @@ struct MyFeed {
 #[derive(Serialize, Debug)]
 struct MyEntry {
     title: String,
+    summary: String,
     content: String,
 }
 
@@ -26,9 +27,14 @@ impl From<Entry> for MyEntry {
             content.body.unwrap_or("N/A".to_owned())
         });
 
+        let summary_value = value
+            .summary
+            .map_or("N/A".to_owned(), |summary| summary.content);
+
         MyEntry {
             title: title_value,
             content: content_value,
+            summary: summary_value,
         }
     }
 }

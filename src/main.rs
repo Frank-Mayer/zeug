@@ -1,5 +1,5 @@
-mod youtube;
 mod medium;
+mod youtube;
 
 use axum::{routing::get, Router};
 
