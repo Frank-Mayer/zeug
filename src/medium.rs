@@ -12,6 +12,7 @@ struct MyFeed {
 
 #[derive(Serialize, Debug)]
 struct MyEntry {
+    slug: String,
     title: String,
     summary: String,
     content: String,
@@ -21,17 +22,18 @@ impl From<Entry> for MyEntry {
     fn from(value: Entry) -> Self {
         let title_value = value
             .title
-            .map_or("N/A".to_owned(), |title_text| title_text.content);
+            .map_or("".to_owned(), |title_text| title_text.content);
 
-        let content_value = value.content.map_or("N/A".to_owned(), |content| {
-            content.body.unwrap_or("N/A".to_owned())
+        let content_value = value.content.map_or("".to_owned(), |content| {
+            content.body.unwrap_or("".to_owned())
         });
 
         let summary_value = value
             .summary
-            .map_or("N/A".to_owned(), |summary| summary.content);
+            .map_or("".to_owned(), |summary| summary.content);
 
         MyEntry {
+            slug: make_slug(title_value.clone()),
             title: title_value,
             content: content_value,
             summary: summary_value,
@@ -48,6 +50,10 @@ impl From<Feed> for MyFeed {
             entries: value.entries.into_iter().map(|a| a.into()).collect(),
         }
     }
+}
+
+fn make_slug(title: String) -> String {
+    title.replace(" ", "-").to_lowercase()
 }
 
 async fn fetch_feed() -> Result<String, reqwest::Error> {
