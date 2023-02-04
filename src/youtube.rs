@@ -16,7 +16,7 @@ async fn live_internal() -> Result<Live, reqwest::Error> {
         .json()
         .await?;
 
-    Ok(data)
+    return Ok(data);
 }
 
 pub async fn live() -> Redirect {
