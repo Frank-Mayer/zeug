@@ -914,6 +914,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "simple-xml-builder"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a50cb1e76f89e3c076f7ae0a609c4b0033c26034f740eddbeb761b64b2f42980"
+dependencies = [
+ "indexmap",
+]
+
+[[package]]
 name = "siphasher"
 version = "0.3.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1389,5 +1398,6 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "simple-xml-builder",
  "tokio",
 ]

@@ -1,4 +1,5 @@
 mod medium;
+mod wakatime;
 mod youtube;
 
 use axum::{routing::get, Router};
@@ -9,7 +10,8 @@ async fn main() {
 
     let app = Router::new()
         .route("/youtube/live", get(youtube::live))
-        .route("/medium", get(medium::feed));
+        .route("/medium", get(medium::feed))
+        .route("/wakatime.svg", get(wakatime::wakatime));
 
     println!("Listening on http://127.0.0.1:{}", PORT);
 
