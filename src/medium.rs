@@ -3,6 +3,8 @@ use feed_rs::{
     parser,
 };
 use serde::Serialize;
+extern crate regex;
+use regex::Regex;
 
 #[derive(Serialize, Debug)]
 struct MyFeed {
@@ -22,10 +24,14 @@ impl From<Entry> for MyEntry {
     fn from(value: Entry) -> Self {
         let title_value = value
             .title
-            .map_or("Frank Mayer Blog".to_owned(), |title_text| title_text.content);
+            .map_or(String::from("Frank Mayer Blog"), |title_text| {
+                title_text.content
+            });
 
-        let content_value = value.content.map_or("N/A".to_owned(), |content| {
-            content.body.unwrap_or("".to_owned())
+        let content_value = value.content.map_or(String::from("N/A"), |content| {
+            content
+                .body
+                .map_or(String::from(""), |content| remove_medium_referrer(content))
         });
 
         let summary_value = value
@@ -46,7 +52,7 @@ impl From<Feed> for MyFeed {
         MyFeed {
             title: value
                 .title
-                .map_or("N/A".to_owned(), |title_text| title_text.content),
+                .map_or(String::from("N/A"), |title_text| title_text.content),
             entries: value.entries.into_iter().map(|a| a.into()).collect(),
         }
     }
@@ -54,6 +60,15 @@ impl From<Feed> for MyFeed {
 
 fn make_slug(title: String) -> String {
     title.replace(" ", "-").to_lowercase()
+}
+
+fn remove_medium_referrer(html: String) -> String {
+    let medium_referrer_pattern: Regex =
+        Regex::new(r#"<img[^>]+https://medium\.com[^>]+>\s*$"#).unwrap();
+
+    medium_referrer_pattern
+        .replace(&html, String::from(""))
+        .to_string()
 }
 
 async fn fetch_feed() -> Result<String, reqwest::Error> {
@@ -68,7 +83,7 @@ async fn fetch_feed() -> Result<String, reqwest::Error> {
 }
 
 fn handler(_e: reqwest::Error) -> String {
-    return "error while fetching data".to_owned();
+    return String::from("error while fetching data");
 }
 
 fn collect_feed(feed: Feed) -> String {
