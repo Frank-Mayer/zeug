@@ -19,6 +19,7 @@ struct MyEntry {
     summary: String,
     content: String,
 }
+use lazy_static::lazy_static;
 
 impl From<Entry> for MyEntry {
     fn from(value: Entry) -> Self {
@@ -39,7 +40,7 @@ impl From<Entry> for MyEntry {
             .map_or("".to_owned(), |summary| summary.content);
 
         MyEntry {
-            slug: make_slug(title_value.clone()),
+            slug: make_slug(title_value.as_str(), value.id.as_str()),
             title: title_value,
             content: content_value,
             summary: summary_value,
@@ -58,8 +59,18 @@ impl From<Feed> for MyFeed {
     }
 }
 
-fn make_slug(title: String) -> String {
-    title.replace(" ", "-").to_lowercase()
+fn make_slug(title: &str, permalink: &str) -> String {
+    lazy_static! {
+        static ref RE: Regex = Regex::new(r#"[^/]{4,}$"#).unwrap();
+        static ref WHITESPACE: Regex = Regex::new(r#"\s+"#).unwrap();
+    }
+
+    let slug_title = WHITESPACE.replace_all(title, "-").to_lowercase();
+
+    RE.find(permalink)
+        .map(|m| m.as_str())
+        .map(|id| format!("{}-{}", slug_title, id))
+        .unwrap_or_else(|| slug_title)
 }
 
 fn remove_medium_referrer(html: String) -> String {
