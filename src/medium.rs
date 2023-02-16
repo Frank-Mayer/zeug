@@ -6,6 +6,10 @@ use serde::Serialize;
 extern crate regex;
 use regex::Regex;
 
+fn empty_string() -> String {
+    return String::from("");
+}
+
 #[derive(Serialize, Debug)]
 struct MyFeed {
     title: String,
@@ -18,11 +22,19 @@ struct MyEntry {
     title: String,
     summary: String,
     content: String,
+    published: String,
+    keywords: Vec<String>,
+    preview_img: String,
 }
 use lazy_static::lazy_static;
 
 impl From<Entry> for MyEntry {
     fn from(value: Entry) -> Self {
+        lazy_static! {
+            static ref IMG_RE: Regex =
+                Regex::new(r#"<img\s[^>]*src\s*="([^"]+)"[^>]*/?>"#).unwrap();
+        }
+
         let title_value = value
             .title
             .map_or(String::from("Frank Mayer Blog"), |title_text| {
@@ -32,18 +44,42 @@ impl From<Entry> for MyEntry {
         let content_value = value.content.map_or(String::from("N/A"), |content| {
             content
                 .body
-                .map_or(String::from(""), |content| remove_medium_referrer(content))
+                .map_or_else(empty_string, |content| remove_medium_referrer(content))
         });
 
         let summary_value = value
             .summary
-            .map_or("".to_owned(), |summary| summary.content);
+            .map_or_else(empty_string, |summary| summary.content);
+
+        let slug_value = make_slug(title_value.as_str(), value.id.as_str());
+
+        let publish_date = value
+            .published
+            .map_or_else(empty_string, |date| date.format("%Y-%m-%d").to_string());
+
+        let keywords_value: Vec<String> = value
+            .categories
+            .iter()
+            .map(|el| el.label.to_owned().unwrap_or_else(|| el.term.clone()))
+            .collect();
+
+        // find image element and use source for preview image
+        let preview_img_value =
+            IMG_RE
+                .captures(content_value.as_str())
+                .map_or_else(empty_string, |capt| {
+                    capt.get(1)
+                        .map_or_else(empty_string, |match_obj| match_obj.as_str().to_string())
+                });
 
         MyEntry {
-            slug: make_slug(title_value.as_str(), value.id.as_str()),
+            slug: slug_value,
             title: title_value,
             content: content_value,
             summary: summary_value,
+            published: publish_date,
+            keywords: keywords_value,
+            preview_img: preview_img_value,
         }
     }
 }
@@ -83,9 +119,7 @@ fn remove_medium_referrer(html: String) -> String {
 }
 
 async fn fetch_feed() -> Result<String, reqwest::Error> {
-    let data: String = reqwest::Client::new()
-        .get("https://medium.com/feed/@tsukinoko")
-        .send()
+    let data: String = reqwest::get("https://medium.com/feed/@tsukinoko")
         .await?
         .text()
         .await?;
