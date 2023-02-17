@@ -31,8 +31,7 @@ use lazy_static::lazy_static;
 impl From<Entry> for MyEntry {
     fn from(value: Entry) -> Self {
         lazy_static! {
-            static ref IMG_RE: Regex =
-                Regex::new(r#"<img\s[^>]*src\s*="([^"]+)"[^>]*/?>"#).unwrap();
+            static ref IMG: Regex = Regex::new(r#"<img\s[^>]*src\s*="([^"]+)"[^>]*/?>"#).unwrap();
         }
 
         let title_value = value
@@ -42,9 +41,7 @@ impl From<Entry> for MyEntry {
             });
 
         let content_value = value.content.map_or(String::from("N/A"), |content| {
-            content
-                .body
-                .map_or_else(empty_string, |content| remove_medium_referrer(content))
+            content.body.unwrap_or_else(empty_string)
         });
 
         let summary_value = value
@@ -65,8 +62,7 @@ impl From<Entry> for MyEntry {
 
         // find image element and use source for preview image
         let preview_img_value =
-            IMG_RE
-                .captures(content_value.as_str())
+            IMG.captures(content_value.as_str())
                 .map_or_else(empty_string, |capt| {
                     capt.get(1)
                         .map_or_else(empty_string, |match_obj| match_obj.as_str().to_string())
@@ -97,25 +93,17 @@ impl From<Feed> for MyFeed {
 
 fn make_slug(title: &str, permalink: &str) -> String {
     lazy_static! {
-        static ref RE: Regex = Regex::new(r#"[^/]{4,}$"#).unwrap();
+        static ref ARTICLE_ID: Regex = Regex::new(r#"[^/]{4,}$"#).unwrap();
         static ref WHITESPACE: Regex = Regex::new(r#"\s+"#).unwrap();
     }
 
     let slug_title = WHITESPACE.replace_all(title, "-").to_lowercase();
 
-    RE.find(permalink)
+    ARTICLE_ID
+        .find(permalink)
         .map(|m| m.as_str())
         .map(|id| format!("{}-{}", slug_title, id))
         .unwrap_or_else(|| slug_title)
-}
-
-fn remove_medium_referrer(html: String) -> String {
-    let medium_referrer_pattern: Regex =
-        Regex::new(r#"<img[^>]+https://medium\.com[^>]+>\s*$"#).unwrap();
-
-    medium_referrer_pattern
-        .replace(&html, String::from(""))
-        .to_string()
 }
 
 async fn fetch_feed() -> Result<String, reqwest::Error> {
