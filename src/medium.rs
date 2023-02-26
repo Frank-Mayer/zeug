@@ -4,20 +4,17 @@ use feed_rs::{
 };
 use serde::Serialize;
 extern crate regex;
+use lazy_static::lazy_static;
 use regex::Regex;
 
-fn empty_string() -> String {
-    return String::from("");
-}
-
 #[derive(Serialize, Debug)]
-struct MyFeed {
+struct StoryFeed {
     title: String,
-    entries: Vec<MyEntry>,
+    entries: Vec<StoryEntry>,
 }
 
 #[derive(Serialize, Debug)]
-struct MyEntry {
+struct StoryEntry {
     slug: String,
     title: String,
     summary: String,
@@ -26,14 +23,19 @@ struct MyEntry {
     keywords: Vec<String>,
     preview_img: String,
 }
-use lazy_static::lazy_static;
 
-impl From<Entry> for MyEntry {
+lazy_static! {
+    static ref IMG: Regex = Regex::new(r#"<img\s[^>]*src\s*="([^"]+)"[^>]*/?>"#).unwrap();
+    static ref ARTICLE_ID: Regex = Regex::new(r#"[^/]{4,}$"#).unwrap();
+    static ref WHITESPACE: Regex = Regex::new(r#"\s+"#).unwrap();
+}
+
+fn empty_string() -> String {
+    return String::from("");
+}
+
+impl From<Entry> for StoryEntry {
     fn from(value: Entry) -> Self {
-        lazy_static! {
-            static ref IMG: Regex = Regex::new(r#"<img\s[^>]*src\s*="([^"]+)"[^>]*/?>"#).unwrap();
-        }
-
         let title_value = value
             .title
             .map_or(String::from("Frank Mayer Blog"), |title_text| {
@@ -68,7 +70,7 @@ impl From<Entry> for MyEntry {
                         .map_or_else(empty_string, |match_obj| match_obj.as_str().to_string())
                 });
 
-        MyEntry {
+        StoryEntry {
             slug: slug_value,
             title: title_value,
             content: content_value,
@@ -80,9 +82,9 @@ impl From<Entry> for MyEntry {
     }
 }
 
-impl From<Feed> for MyFeed {
+impl From<Feed> for StoryFeed {
     fn from(value: Feed) -> Self {
-        MyFeed {
+        StoryFeed {
             title: value
                 .title
                 .map_or(String::from("N/A"), |title_text| title_text.content),
@@ -92,11 +94,6 @@ impl From<Feed> for MyFeed {
 }
 
 fn make_slug(title: &str, permalink: &str) -> String {
-    lazy_static! {
-        static ref ARTICLE_ID: Regex = Regex::new(r#"[^/]{4,}$"#).unwrap();
-        static ref WHITESPACE: Regex = Regex::new(r#"\s+"#).unwrap();
-    }
-
     let slug_title = WHITESPACE.replace_all(title, "-").to_lowercase();
 
     ARTICLE_ID
@@ -115,19 +112,19 @@ async fn fetch_feed() -> Result<String, reqwest::Error> {
     return Ok(data);
 }
 
-fn handler(_e: reqwest::Error) -> String {
-    return String::from("error while fetching data");
-}
-
-fn collect_feed(feed: Feed) -> String {
-    let feed: MyFeed = feed.into();
-    // Todo Handle error
-    serde_json::to_string(&feed).unwrap()
+fn default_feed() -> String {
+    String::from(r#"{"title":"N/A","entries":[]}"#)
 }
 
 pub async fn feed() -> String {
     match fetch_feed().await {
-        Ok(xml) => collect_feed(parser::parse(xml.as_bytes()).unwrap()),
-        Err(err) => handler(err),
+        Ok(rss_str) => match parser::parse(rss_str.as_bytes()) {
+            Ok(rss) => {
+                let story_feed: StoryFeed = rss.into();
+                serde_json::to_string(&story_feed).unwrap_or_else(|_| default_feed())
+            }
+            Err(_) => default_feed(),
+        },
+        Err(_) => default_feed(),
     }
 }
